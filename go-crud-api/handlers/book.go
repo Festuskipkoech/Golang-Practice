@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 
+	"go-crud-api/middleware"
 	"go-crud-api/models"
 	"go-crud-api/store"
 
@@ -36,6 +38,9 @@ func respondError(w http.ResponseWriter, status int, message string) {
 
 // Get /books
 func (h *BookHandler) GetAll(w http.ResponseWriter, r *http.Request) {
+	requestId :=middleware.GateRequestID(r)
+	slog.Info("Fetching all books", "request_id", requestId)
+
 	books := h.store.GetAll()
 	respond(w, http.StatusOK, books)
 }
