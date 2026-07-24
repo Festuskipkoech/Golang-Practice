@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package search;
+
+// The Go package where generated code will live.
+option go_package = "grc-lesson/gen/search";
+
+// CrawlRequest is what the Go engine sends to Spider-rs.
+// In OpenSearch this carries the URL to fetch and extract.
+message CrawlRequest {
+    string url = 1; // the URL to crawl
+    bool javascript = 2; // does this page need JS rendering?
+    int32 timeout_ms = 3; // how long to wait before giving up
+}
+
+// CrawlResponse is what Spider-rs sends back.
+message CrawlResponse {
+  string url = 1; // echo of the original URL
+  string markdown = 2; // extracted clean markdown content
+  int32 token_count = 3; // pre-counted for agent consumption
+  int32 status_code = 4; // HTTP status of the page
+  string error = 5; // empty string means success
+}
+
+// BatchCrawlRequest sends multiple URLs in one call.
+// More efficient than one RPC per URL.
+message BatchCrawlRequest {
+    repeated CrawlRequest requests = 1; // repeated = slice in Go
+}
+
+// BatchCrawlResponse returns results for all URLs.
+message BatchCrawlResponse {
+    repeated CrawlResponse results = 1;
+}
+
+// SearchResult is one result item.
+message SearchResult {
+    string url = 1;
+    string title = 2;
+    string snippet = 3;
+    string content = 4; //populated if crawled
+    string relevance_score = 5;
+    int32 token_count = 6;
+}
+
+// SearchResponse is the full response to the agent.
+message SearchResponse {
+    string query = 1;
+    string  intent = 2;
+    repeated SearchResult results = 3;
+    bool cached = 4;
+    int32 latency_ms = 5;
+}
+
+// CrawlService is what Spider-rs exposes.
+// The Go engine calls this to fetch page content.
+service CrawlService {
+    // Crawl fetches one URL and returns extracted markdown.
+    rpc Crawl(CrawlRequest) returns (CrawlResponse);
+
+    // BatchCrawl fetches multiple URLs concurrently.
+    rpc BatchCrawl(BatchCrawlRequest) returns (BatchCrawlResponse);
+
+    // StreamCrawl streams results back as each URL completes —
+    // the client gets results immediately, not after all URLs finish.
+    // This is server-side streaming — one request, many responses.
+    rpc StreamCrawl(BatchCrawlRequest) returns (stream CrawlResponse);
+}
+
+// SearchService is what the Go engine exposes to agents.
+service SearchService {
+    rpc Search(SearchResult) returns (SearchResponse);
+}
+
